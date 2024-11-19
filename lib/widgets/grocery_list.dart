@@ -15,6 +15,7 @@ class GroceryList extends StatefulWidget {
 
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
+  var _isLoading = true;
 
   @override
   void initState() {
@@ -26,11 +27,13 @@ class _GroceryListState extends State<GroceryList> {
     final url = Uri.https('shopping-list-a56f1-default-rtdb.firebaseio.com',
         'shopping-list.json');
     final response = await http.get(url);
-    final Map<String, dynamic> listData =
-        json.decode(response.body);
+    final Map<String, dynamic> listData = json.decode(response.body);
     final List<GroceryItem> _loadedItems = [];
     for (final item in listData.entries) {
-      final category = categories.entries.firstWhere((catItem) => catItem.value.title==item.value['category']).value;
+      final category = categories.entries
+          .firstWhere(
+              (catItem) => catItem.value.title == item.value['category'])
+          .value;
       _loadedItems.add(
         GroceryItem(
           id: item.key,
@@ -41,18 +44,24 @@ class _GroceryListState extends State<GroceryList> {
       );
     }
     setState(() {
-    _groceryItems = _loadedItems;
+      _groceryItems = _loadedItems;
+      _isLoading = false;
     });
   }
 
   void _addItem() async {
-    await Navigator.of(context).push<GroceryItem>(
+    final newItem = await Navigator.of(context).push<GroceryItem>(
       MaterialPageRoute(
         builder: (ctx) => const NewItem(),
       ),
     );
 
-    _loadItems();
+    if (newItem == null) {
+      return;
+    }
+    setState(() {
+      _groceryItems.add(newItem);
+    });
   }
 
   void _removeItem(GroceryItem item) {
@@ -66,6 +75,10 @@ class _GroceryListState extends State<GroceryList> {
     Widget content = const Center(
       child: Text('No items added yet.'),
     );
+
+    if (_isLoading) {
+      content = const Center(child: CircularProgressIndicator());
+    }
 
     if (_groceryItems.isNotEmpty) {
       content = ListView.builder(
